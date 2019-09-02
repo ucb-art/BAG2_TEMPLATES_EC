@@ -77,6 +77,8 @@ class MOSTechPlanarGeneric(MOSTech):
         g_via_info = mos_constants['g_via']
         d_via_info = mos_constants['d_via']
 
+        dual_gate = kwargs.get('dual_gate', False)
+
         g_drc_info = self.get_conn_drc_info(lch_unit, 'g')
         g_m1_w = g_drc_info[1]['w']
         drc_info = self.get_conn_drc_info(lch_unit, 'd')
@@ -126,7 +128,13 @@ class MOSTechPlanarGeneric(MOSTech):
         d_mx_yt = d_mx_yb + mx_h
 
         # find PO and block top Y coordinate
-        po_yt = od_yt + po_od_exty
+        if dual_gate:
+            top_g_m1_yb = od_yt + (od_yb - g_m1_yt)
+            top_g_co_yc = top_g_m1_yb + g_m1_w // 2
+            top_g_co_yt = top_g_co_yc + g_via_info['dim'][0][1] // 2
+            po_yt = top_g_co_yt + g_via_info['bot_enc_le'][0]
+        else:
+            po_yt = od_yt + po_od_exty
         blk_yt = po_yt + po_spy // 2
         arr_y = 0, blk_yt
 
