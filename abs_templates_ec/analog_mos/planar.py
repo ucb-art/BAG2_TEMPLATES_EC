@@ -66,7 +66,7 @@ class MOSTechPlanarGeneric(MOSTech):
         MOSTech.__init__(self, config, tech_info, mos_entry_name=mos_entry_name)
 
     def get_mos_yloc_info(self, lch_unit, w, **kwargs):
-        # type: (int, float, **kwargs) -> Dict[str, Any]
+        # type: (int, float, Any) -> Dict[str, Any]
         # get transistor constants
         mos_constants = self.get_mos_tech_constants(lch_unit)
         od_spy = mos_constants['od_spy']
@@ -76,6 +76,8 @@ class MOSTechPlanarGeneric(MOSTech):
         po_od_exty = mos_constants['po_od_exty']
         g_via_info = mos_constants['g_via']
         d_via_info = mos_constants['d_via']
+
+        dual_gate = kwargs.get('dual_gate', False)
 
         g_drc_info = self.get_conn_drc_info(lch_unit, 'g')
         g_m1_w = g_drc_info[1]['w']
@@ -126,7 +128,13 @@ class MOSTechPlanarGeneric(MOSTech):
         d_mx_yt = d_mx_yb + mx_h
 
         # find PO and block top Y coordinate
-        po_yt = od_yt + po_od_exty
+        if dual_gate:
+            top_g_m1_yb = od_yt + (od_yb - g_m1_yt)
+            top_g_co_yc = top_g_m1_yb + g_m1_w // 2
+            top_g_co_yt = top_g_co_yc + g_via_info['dim'][0][1] // 2
+            po_yt = top_g_co_yt + g_via_info['bot_enc_le'][0]
+        else:
+            po_yt = od_yt + po_od_exty
         blk_yt = po_yt + po_spy // 2
         arr_y = 0, blk_yt
 
@@ -155,7 +163,7 @@ class MOSTechPlanarGeneric(MOSTech):
         )
 
     def get_sub_yloc_info(self, lch_unit, w, **kwargs):
-        # type: (int, float, **kwargs) -> Dict[str, Any]
+        # type: (int, float, Any) -> Dict[str, Any]
         dnw_mode = kwargs.get('dnw_mode', '')
         blk_pitch = kwargs.get('blk_pitch', 1)
 
@@ -224,7 +232,7 @@ class MOSTechPlanarGeneric(MOSTech):
         )
 
     def get_edge_info(self, lch_unit, guard_ring_nf, is_end, **kwargs):
-        # type: (int, int, bool, **kwargs) -> Dict[str, Any]
+        # type: (int, int, bool, Any) -> Dict[str, Any]
 
         dnw_margins = self.config['dnw_margins']
 
@@ -283,13 +291,13 @@ class MOSTechPlanarGeneric(MOSTech):
         )
 
     def get_md_min_len(self, lch_unit):
-        # type: () -> int
+        # type: (int) -> int
         """Returns minimum drain wire length."""
         drc_info = self.get_conn_drc_info(lch_unit, 'd')
         return max((info['min_len'] for info in drc_info.values()))
 
     def get_mos_info(self, lch_unit, w, mos_type, threshold, fg, **kwargs):
-        # type: (int, int, str, str, int, **kwargs) -> Dict[str, Any]
+        # type: (int, int, str, str, int, Any) -> Dict[str, Any]
         """Get transistor layout information
 
         Layout placement strategy:
@@ -386,7 +394,7 @@ class MOSTechPlanarGeneric(MOSTech):
         )
 
     def get_valid_extension_widths(self, lch_unit, top_ext_info, bot_ext_info, **kwargs):
-        # type: (int, ExtInfo, ExtInfo) -> List[int]
+        # type: (int, ExtInfo, ExtInfo, Any) -> List[int]
         """Compute a list of valid extension widths.
 
         The DRC rules that we consider are:
@@ -530,7 +538,7 @@ class MOSTechPlanarGeneric(MOSTech):
             *fill_info[0][2], offset=po_area_offset, invert=fill_info[1])[0]
 
     def get_ext_info(self, lch_unit, w, fg, top_ext_info, bot_ext_info, **kwargs):
-        # type: (int, int, int, ExtInfo, ExtInfo, **kwargs) -> Dict[str, Any]
+        # type: (int, int, int, ExtInfo, ExtInfo, Any) -> Dict[str, Any]
         """Draw extension block.
 
         extension block has zero or more rows of dummy transistors, which are
@@ -712,7 +720,7 @@ class MOSTechPlanarGeneric(MOSTech):
         )
 
     def get_sub_ring_ext_info(self, sub_type, height, fg, end_ext_info, **kwargs):
-        # type: (str, int, int, ExtInfo, **kwargs) -> Dict[str, Any]
+        # type: (str, int, int, ExtInfo, Any) -> Dict[str, Any]
         lch = self.get_substrate_ring_lch()
         lch_unit = int(round(lch / self.config['layout_unit'] / self.res))
 
@@ -767,7 +775,7 @@ class MOSTechPlanarGeneric(MOSTech):
         )
 
     def get_substrate_info(self, lch_unit, w, sub_type, threshold, fg, blk_pitch=1, **kwargs):
-        # type: (int, float, str, str, int, int, **kwargs) -> Dict[str, Any]
+        # type: (int, float, str, str, int, int, Any) -> Dict[str, Any]
         """Get substrate layout information.
 
         Strategy:
@@ -874,7 +882,7 @@ class MOSTechPlanarGeneric(MOSTech):
         )
 
     def _get_end_blk_info(self, lch_unit, sub_type, threshold, fg, is_end, blk_pitch, **kwargs):
-        # type: (int, str, str, int, bool, int, **kwargs) -> Dict[str, Any]
+        # type: (int, str, str, int, bool, int, Any) -> Dict[str, Any]
         """Just draw nothing, but compute height so edge margin is met."""
 
         is_sub_ring = kwargs.get('is_sub_ring', False)
@@ -963,13 +971,13 @@ class MOSTechPlanarGeneric(MOSTech):
         return ans
 
     def get_analog_end_info(self, lch_unit, sub_type, threshold, fg, is_end, blk_pitch, **kwargs):
-        # type: (int, str, str, int, bool, int, **kwargs) -> Dict[str, Any]
+        # type: (int, str, str, int, bool, int, Any) -> Dict[str, Any]
         """Just draw nothing, but compute height so edge margin is met."""
         return self._get_end_blk_info(lch_unit, sub_type, threshold, fg, is_end, blk_pitch,
                                       **kwargs)
 
     def get_sub_ring_end_info(self, sub_type, threshold, fg, end_ext_info, **kwargs):
-        # type: (str, str, int, ExtInfo, **kwargs) -> Dict[str, Any]
+        # type: (str, str, int, ExtInfo, Any) -> Dict[str, Any]
         """Empty block, just reserve space for margin."""
 
         lch = self.get_substrate_ring_lch()
@@ -980,7 +988,7 @@ class MOSTechPlanarGeneric(MOSTech):
         return self._get_end_blk_info(lch_unit, sub_type, threshold, fg, True, 1, **kwargs)
 
     def get_outer_edge_info(self, guard_ring_nf, layout_info, is_end, adj_blk_info, **kwargs):
-        # type: (int, Dict[str, Any], bool, Optional[Any]) -> Dict[str, Any]
+        # type: (int, Dict[str, Any], bool, Optional[Any], Any) -> Dict[str, Any]
         lch_unit = layout_info['lch_unit']
         sd_pitch = layout_info['sd_pitch']
         arr_y = layout_info['arr_y']
@@ -1018,8 +1026,8 @@ class MOSTechPlanarGeneric(MOSTech):
             lay_info_list=new_lay_list,
         )
 
-    def get_gr_sub_info(self, guard_ring_nf, layout_info):
-        # type: (int, Dict[str, Any]) -> Dict[str, Any]
+    def get_gr_sub_info(self, guard_ring_nf, layout_info, **kwargs):
+        # type: (int, Dict[str, Any], Any) -> Dict[str, Any]
 
         imp_layers_info_struct = self.mos_config['imp_layers']
         thres_layers_info_struct = self.mos_config['thres_layers']
@@ -1111,8 +1119,8 @@ class MOSTechPlanarGeneric(MOSTech):
             sub_fg=(fg_od_margin, fg_od_margin + guard_ring_nf),
         )
 
-    def get_gr_sep_info(self, layout_info, adj_blk_info):
-        # type: (Dict[str, Any], Any) -> Dict[str, Any]
+    def get_gr_sep_info(self, layout_info, adj_blk_info, **kwargs):
+        # type: (Dict[str, Any], Any, Any) -> Dict[str, Any]
 
         lch_unit = layout_info['lch_unit']
         sd_pitch = layout_info['sd_pitch']
@@ -1897,6 +1905,7 @@ class MOSTechPlanarGeneric(MOSTech):
 
         return via_drawn
 
+    # noinspection PyMethodMayBeStatic
     def _add_via_with_arr_constraint(self, template, mbot_yb, mbot_yt, mtop_yb, mtop_yt, via_type,
                                      x0, via_w, via_h, num_sd, sd_pitch, via_sp, via_benc_le,
                                      via_tenc_le, arr_nmax, arr_sp, via_enc1, via_enc2):
