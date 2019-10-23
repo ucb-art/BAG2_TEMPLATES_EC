@@ -541,7 +541,7 @@ class DigitalBase(TemplateBase, metaclass=abc.ABCMeta):
                                                 'R0', 'XBSUB%d'),
                                                (top_warrs, self._top_sub_master, top_sub2, ytop,
                                                 'MX', 'XTSUB%d')):
-            port_name = 'VSS' if m1.has_port('VSS') else 'VDD'
+            port_name = 'VSS_s' if m1.has_port('VSS') else 'VDD_s'
             for col_idx in range(0, num_col, 2):
                 xcur = laygo_info.col_to_coord(col_idx, unit_mode=True)
                 if col_idx in port_cols:
