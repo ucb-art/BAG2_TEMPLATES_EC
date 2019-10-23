@@ -1363,9 +1363,10 @@ class MOSTechFinfetBase(MOSTech, metaclass=abc.ABCMeta):
         # add implant layers
         imp_params = [(bot_mtype, bot_thres, 0, min(imp_ysep, yt), 0, thres_ysep),
                       (top_mtype, top_thres, max(imp_ysep, 0), yt, thres_ysep, yt)]
-
+        prev_mtype = None
         for mtype, thres, imp_yb, imp_yt, thres_yb, thres_yt in imp_params:
-            mtype = self.get_implant_type(lch_unit, mtype, is_planar_sub=is_planar_sub, is_sub_ring=is_sub_ring)
+            mtype = self.get_implant_type(lch_unit, mtype, is_planar_sub=is_planar_sub, is_sub_ring=is_sub_ring,
+                                          prev_mtype=prev_mtype)
             imp_layers_info = imp_layers_info_struct[mtype]
             thres_layers_info = thres_layers_info_struct[mtype][thres]
             for cur_yb, cur_yt, lay_info in [(imp_yb, imp_yt, imp_layers_info),
@@ -1373,6 +1374,12 @@ class MOSTechFinfetBase(MOSTech, metaclass=abc.ABCMeta):
 
                 for lay_name in lay_info:
                     lay_info_list.append((lay_name, 0, cur_yb, cur_yt))
+            if mtype == 'ntap_ext':
+                for lay_name in imp_layers_info:
+                    lay_info_list.append((lay_name, 0, prev_imp_yb, prev_imp_yt))
+            prev_mtype = mtype
+            prev_imp_yb = imp_yb
+            prev_imp_yt = imp_yt
 
         # add CPO layers
         if has_cpo:

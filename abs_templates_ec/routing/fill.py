@@ -44,6 +44,7 @@ class PowerFill(TemplateBase):
         # type: () -> Dict[str, str]
         return dict(
             fill_config='the fill configuration dictionary.',
+            top_layer='the top fill layer.',
             bot_layer='the bottom fill layer.',
             show_pins='True to show pins.',
         )
@@ -52,20 +53,26 @@ class PowerFill(TemplateBase):
     def get_default_param_values(cls):
         # type: () -> Dict[str, Any]
         return dict(
+            top_layer=None,
             show_pins=True,
         )
 
     def get_layout_basename(self):
         bot_lay = self.params['bot_layer']
-        return 'power_fill_m%dm%d' % (bot_lay, bot_lay + 1)
+        top_lay = self.params['top_layer']
+        if top_lay is None:
+            top_lay = bot_lay + 1
+        return 'power_fill_m%dm%d' % (bot_lay, top_lay)
 
     def draw_layout(self):
         # type: () -> None
         fill_config = self.params['fill_config']
         bot_layer = self.params['bot_layer']
+        top_layer = self.params['top_layer']
         show_pins = self.params['show_pins']
 
-        top_layer = bot_layer + 1
+        if top_layer is None:
+            top_layer = bot_layer + 1
         blk_w, blk_h = self.grid.get_fill_size(top_layer, fill_config, unit_mode=True)
         bnd_box = BBox(0, 0, blk_w, blk_h, self.grid.resolution, unit_mode=True)
         self.set_size_from_bound_box(top_layer, bnd_box)

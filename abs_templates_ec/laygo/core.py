@@ -229,8 +229,8 @@ class LaygoBaseInfo(object):
 
         # error checking
         dig_top_layer = config['tr_layers'][-1]
-        if dig_top_layer != self._tech_cls.get_dig_top_layer():
-            raise ValueError('Top tr_layers must be layer %d' % self._tech_cls.get_dig_top_layer())
+        # if dig_top_layer != self._tech_cls.get_dig_top_layer():
+        #     raise ValueError('Top tr_layers must be layer %d' % self._tech_cls.get_dig_top_layer())
 
         # update routing grid
         lch_unit = int(round(config['lch'] / grid.layout_unit / grid.resolution))
@@ -1424,19 +1424,42 @@ class LaygoBase(TemplateBase, metaclass=abc.ABCMeta):
                 blk_type = 'stack2' + gate_loc
                 num2 = seg
                 num1 = False
+                tot_fg = 2 * seg
             else:
                 blk_type = 'fg2' + gate_loc
                 num2 = seg // 2
                 num1 = (seg % 2 == 1)
+                tot_fg = seg
 
+            kwargs['tot_fg'] = tot_fg
             ne = (num2 + 1) // 2
             no = num2 - ne
+            ne2 = ne - 1
+            no2 = no - 1
+
             if num2 > 0:
-                inst = [self._add_laygo_primitive(blk_type, loc=(col_idx, row_idx), nx=ne, spx=4,
-                                                  **kwargs)]
-                if no > 0:
-                    inst.append(self._add_laygo_primitive(blk_type, loc=(col_idx + 2, row_idx),
-                                                          flip=True, nx=no, spx=4, **kwargs))
+                kwargs['edge'] = True
+                instl = [self._add_laygo_primitive(blk_type, loc=(col_idx, row_idx), **kwargs)]
+            else:
+                instl = []
+
+            if no > 0:
+                kwargs['edge'] = True if tot_fg % 2 == 0 else False
+                instr_flip = False if num2 % 2 == 1 else True
+                kwargs['instr_flip'] = instr_flip
+                instr = [self._add_laygo_primitive(blk_type, loc=(col_idx + num2 * 2 - 2, row_idx),
+                                                   flip=instr_flip, **kwargs)]
+                kwargs['instr_flip'] = True
+            else:
+                instr = []
+
+            if ne2 > 0:
+                kwargs['edge'] = False
+                inst = [self._add_laygo_primitive(blk_type, loc=(col_idx + 2, row_idx),
+                                                  flip=True, nx=ne2, spx=4, **kwargs)]
+                if no2 > 0:
+                    inst.append(self._add_laygo_primitive(blk_type, loc=(col_idx + 4, row_idx),
+                                                          flip=False, nx=no2, spx=4, **kwargs))
             else:
                 inst = []
 
@@ -1473,6 +1496,12 @@ class LaygoBase(TemplateBase, metaclass=abc.ABCMeta):
                         pins.extend(inst[1].get_all_port_pins(cur_name))
                 else:
                     pins = []
+
+                if instl:
+                    pins.extend(instl[0].get_all_port_pins(cur_name))
+
+                if instr:
+                    pins.extend(instr[0].get_all_port_pins(cur_name))
 
                 if inst1 is not None:
                     if cur_name == 'g0' or cur_name == 'g1':
