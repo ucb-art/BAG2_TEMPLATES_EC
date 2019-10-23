@@ -1361,8 +1361,8 @@ class MOSTechFinfetBase(MOSTech, metaclass=abc.ABCMeta):
                 thres_ysep = thres_split_y[sep_idx]
 
         # add implant layers
-        imp_params = [(bot_mtype, bot_thres, 0, imp_ysep, 0, thres_ysep),
-                      (top_mtype, top_thres, imp_ysep, yt, thres_ysep, yt)]
+        imp_params = [(bot_mtype, bot_thres, 0, min(imp_ysep, yt), 0, thres_ysep),
+                      (top_mtype, top_thres, max(imp_ysep, 0), yt, thres_ysep, yt)]
         prev_mtype = None
         for mtype, thres, imp_yb, imp_yt, thres_yb, thres_yt in imp_params:
             mtype = self.get_implant_type(lch_unit, mtype, is_planar_sub=is_planar_sub, is_sub_ring=is_sub_ring,
