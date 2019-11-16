@@ -1915,7 +1915,7 @@ class MOSTechPlanarGeneric(MOSTech):
         via_yc = (yb_max + yt_min) // 2
         area_h = yt_min - yb_max
         num_via = (area_h + via_sp) // (via_w + via_sp)
-        if num_via <= 0:
+        if num_via < 0:
             import pdb
             pdb.set_trace()
             return False
