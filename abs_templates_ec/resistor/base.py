@@ -373,7 +373,8 @@ class ResTech(object, metaclass=abc.ABCMeta):
             cur_layer += 1
 
         # get block size
-        wblk, hblk = grid.get_block_size(cur_layer - 1, unit_mode=True, include_private=True)
+        wblk, hblk = grid.get_block_size(cur_layer - 1, unit_mode=True, include_private=True,
+                                         half_blk_x=False, half_blk_y=False)
         wblk_drc, hblk_drc = self.get_block_pitch()
         wblk = lcm([wblk, wblk_drc])
         hblk = lcm([hblk, hblk_drc])

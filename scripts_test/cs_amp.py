@@ -85,7 +85,6 @@ class CSAmp(AnalogBase):
             th_dict={},
             nduml=4,
             ndumr=4,
-            gds_space=1,
             hm_width=1,
             hm_cur_width=-1,
             guard_ring_nf=0,
