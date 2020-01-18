@@ -154,7 +154,7 @@ class DigitalBase(TemplateBase, metaclass=abc.ABCMeta):
         bot_row_y = row_prop_list[0]['row_y']
         top_row_y = row_prop_list[-1]['row_y']
 
-        self._laygo_info = LaygoBaseInfo(self.grid, layout_info['config'])
+        self._laygo_info = LaygoBaseInfo(self.grid, layout_info['config'], top_layer=layout_info['top_layer'])
         self._laygo_info.guard_ring_nf = guard_ring_nf
         self._laygo_info.draw_boundaries = draw_boundaries
         self._laygo_info.end_mode = end_mode

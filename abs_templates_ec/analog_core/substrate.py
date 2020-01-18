@@ -110,7 +110,8 @@ class SubstrateContact(TemplateBase):
             max_nxblk='Maximum width in number of blocks.  Negative to disable',
             port_tid='Substrate port (tr_idx, tr_width) tuple.',
             show_pins='True to show pin labels.',
-
+            half_blk_y='Allow half block placement',
+            half_blk_x='Allow half block placement',
         )
 
     @classmethod
@@ -124,6 +125,8 @@ class SubstrateContact(TemplateBase):
             max_nxblk=-1,
             port_tid=None,
             show_pins=False,
+            half_blk_y=True,
+            half_blk_x=True,
         )
 
     def get_substrate_box(self):
@@ -163,6 +166,9 @@ class SubstrateContact(TemplateBase):
         port_tid = self.params['port_tid']
         show_pins = self.params['show_pins']
 
+        half_blk_y = self.params['half_blk_y']
+        half_blk_x = self.params['half_blk_x']
+
         res = self.grid.resolution
         well_width = int(round(well_width / res))
         right_end = (end_mode & 8) != 0
@@ -171,7 +177,8 @@ class SubstrateContact(TemplateBase):
         bot_end = (end_mode & 1) != 0
 
         # get layout info, also set RoutingGrid to substrate grid.
-        layout_info = AnalogBaseInfo(self.grid, lch, 0, top_layer=top_layer, end_mode=end_mode)
+        layout_info = AnalogBaseInfo(self.grid, lch, 0, top_layer=top_layer, end_mode=end_mode,
+                                     half_blk_y=half_blk_y, half_blk_x=half_blk_x)
         # compute template width in number of sd pitches
         # find maximum number of fingers we can draw
         bin_iter = BinaryIterator(1, None)

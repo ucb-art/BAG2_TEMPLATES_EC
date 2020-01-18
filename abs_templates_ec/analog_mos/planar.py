@@ -30,6 +30,8 @@ AdjRowInfo = namedtuple('AdjRowInfo', [
 ])
 EdgeInfo = namedtuple('EdgeInfo', [
     'od_type',
+    'draw_layers',
+    'y_intv',
 ])
 
 
@@ -326,7 +328,7 @@ class MOSTechPlanarGeneric(MOSTech):
             lay_info_list.append((imp_name, 0, blk_yb, blk_yt))
 
         od_type = 'mos_fake' if ds_dummy else 'mos'
-        lr_edge_info = EdgeInfo(od_type=od_type)
+        lr_edge_info = EdgeInfo(od_type=od_type, draw_layers={}, y_intv={})
         od_h = od_yt - od_yb
         po_types = ('PO', ) * fg
         ext_top_info = ExtInfo(
@@ -818,7 +820,7 @@ class MOSTechPlanarGeneric(MOSTech):
             m1_sub_h = max(m1_sub_h, guard_ring_nf * sd_pitch + 2 * sub_m1_extx)
 
         po_types = ('', ) * fg
-        lr_edge_info = EdgeInfo(od_type='sub')
+        lr_edge_info = EdgeInfo(od_type='sub', draw_layers={}, y_intv={})
         ext_top_info = ExtInfo(
             margins=yloc_info['top_margins'],
             od_h=od_h,
@@ -909,7 +911,7 @@ class MOSTechPlanarGeneric(MOSTech):
             # allow substrate row abutment
             arr_yt = 0
 
-        lr_edge_info = EdgeInfo(od_type=None)
+        lr_edge_info = EdgeInfo(od_type=None, draw_layers={}, y_intv={})
         if is_sub_ring_end:
             ext_margins = end_ext_info.margins
             od_margin, od_spy = ext_margins['od']
