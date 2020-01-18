@@ -207,7 +207,7 @@ class SubstrateContact(TemplateBase):
             while sub_fg_tot > 0 and (cur_nxblk > max_nxblk or (max_nxblk - cur_nxblk) % 2 != 0):
                 sub_fg_tot -= 1
                 place_info = layout_info.get_placement_info(sub_fg_tot)
-                cur_nxblk = place_info.tot_width // blkw - 1
+                cur_nxblk = place_info.tot_width // blkw
             if sub_fg_tot <= 0:
                 raise ValueError('Cannot draw substrate with width = %d, '
                                  'max_nxblk = %d' % (well_width, max_nxblk))
