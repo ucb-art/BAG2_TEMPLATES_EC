@@ -201,6 +201,9 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         gb_conn_y = row_yloc_info['gb_conn_y']
         ds_conn_y = row_yloc_info['ds_conn_y']
 
+        mos_constants = self.get_mos_tech_constants(lch_unit)
+        imp_min_h = mos_constants.get('imp_min_h', 0)
+
         # compute extension information
         mtype = (mos_type, mos_type)
         po_type = 'PO_sub' if is_sub else 'PO'
@@ -208,7 +211,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         lr_edge_info = EdgeInfo(od_type='sub' if is_sub else 'mos', draw_layers={}, y_intv={})
         ext_top_info = ExtInfo(margins=top_margins,
                                od_h=row_yloc_info['od'][1] - row_yloc_info['od'][0],
-                               imp_min_h=0,
+                               imp_min_h=imp_min_h,
                                mtype=mtype,
                                m1_sub_h=0,
                                thres=threshold,
@@ -218,7 +221,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
                                )
         ext_bot_info = ExtInfo(margins=bot_margins,
                                od_h=row_yloc_info['od'][1] - row_yloc_info['od'][0],
-                               imp_min_h=0,
+                               imp_min_h=imp_min_h,
                                mtype=mtype,
                                m1_sub_h=0,
                                thres=threshold,
