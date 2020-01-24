@@ -343,6 +343,14 @@ class LaygoTech(MOSTech, metaclass=abc.ABCMeta):
         """
         return self.mos_config['laygo_fg2d_s_short']
 
+    def can_short_ds_conn_layer(self):
+        # type: () -> bool
+        """
+        Returns True if the drain and source ports on dig_conn_layer of adjacent rows with gate connection in the
+        middle, can be shorted without violating spacing to gate connections
+        """
+        return self.mos_config.get('laygo_short_ds_conn_layer', True)
+
     def get_sub_columns(self, lch_unit):
         # type: (int) -> int
         """Returns the number of columns per substrate block.
