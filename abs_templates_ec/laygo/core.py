@@ -290,6 +290,10 @@ class LaygoBaseInfo(object):
         return self._tech_cls.get_laygo_fg2d_s_short()
 
     @property
+    def can_short_ds_conn_layer(self):
+        return self._tech_cls.can_short_ds_conn_layer()
+
+    @property
     def sub_columns(self):
         return self._tech_cls.get_sub_columns(self._lch_unit)
 
@@ -562,6 +566,10 @@ class LaygoBase(TemplateBase, metaclass=abc.ABCMeta):
     @property
     def fg2d_s_short(self):
         return self._laygo_info.fg2d_s_short
+
+    @property
+    def can_short_ds_conn_layer(self):
+        return self._laygo_info.can_short_ds_conn_layer
 
     @property
     def sub_columns(self):
