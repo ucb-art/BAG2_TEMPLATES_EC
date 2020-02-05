@@ -456,9 +456,9 @@ class ResArrayBase(TemplateBase, metaclass=abc.ABCMeta):
         # make template masters
         core_params = dict(res_info=res_info)
         core_master = self.new_template(params=core_params, temp_cls=AnalogResCore)
-        lr_params = core_master.get_boundary_params('lr')
+        lr_params = core_master.get_boundary_params('lr')  # lr is left-right
         lr_master = self.new_template(params=lr_params, temp_cls=AnalogResBoundary)
-        tb_params = core_master.get_boundary_params('tb')
+        tb_params = core_master.get_boundary_params('tb')  # tb is top-bottom
         tb_master = self.new_template(params=tb_params, temp_cls=AnalogResBoundary)
         corner_params = core_master.get_boundary_params('corner')
         corner_master = self.new_template(params=corner_params, temp_cls=AnalogResBoundary)

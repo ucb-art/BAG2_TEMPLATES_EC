@@ -30,6 +30,8 @@ AdjRowInfo = namedtuple('AdjRowInfo', [
 ])
 EdgeInfo = namedtuple('EdgeInfo', [
     'od_type',
+    'draw_layers',
+    'y_intv',
 ])
 
 
@@ -326,7 +328,7 @@ class MOSTechPlanarGeneric(MOSTech):
             lay_info_list.append((imp_name, 0, blk_yb, blk_yt))
 
         od_type = 'mos_fake' if ds_dummy else 'mos'
-        lr_edge_info = EdgeInfo(od_type=od_type)
+        lr_edge_info = EdgeInfo(od_type=od_type, draw_layers={}, y_intv={})
         od_h = od_yt - od_yb
         po_types = ('PO', ) * fg
         ext_top_info = ExtInfo(
@@ -449,15 +451,15 @@ class MOSTechPlanarGeneric(MOSTech):
         po_h = max(po_h_min, od_w_min + 2 * po_od_exty)
         po_od_exty = (po_h - od_w_min) // 2
         dum_po_yb = -bot_ext_info.margins['po'][0] + po_spy
-        od_bot_margin = max(dum_po_yb + po_od_exty, bot_imp_min_h + imp_od_ency)
+        od_bot_margin = max(dum_po_yb + po_od_exty, imp_od_ency)
         if imp_po_ency is not None:
-            od_bot_margin = max(od_bot_margin, bot_imp_min_h + imp_po_ency + po_od_exty)
+            od_bot_margin = max(od_bot_margin, imp_po_ency + po_od_exty)
 
         # get od_top_margin assuming yt = 0
         dum_po_yt = top_ext_info.margins['po'][0] - po_spy
-        od_top_margin = min(dum_po_yt - po_od_exty, -top_imp_min_h - imp_od_ency)
+        od_top_margin = min(dum_po_yt - po_od_exty, - imp_od_ency)
         if imp_po_ency is not None:
-            od_top_margin = min(od_top_margin, -top_imp_min_h - imp_po_ency - po_od_exty)
+            od_top_margin = min(od_top_margin, - imp_po_ency - po_od_exty)
         od_top_margin *= -1
 
         # get minimum extension width from OD related spacing rules
@@ -497,6 +499,9 @@ class MOSTechPlanarGeneric(MOSTech):
         bot_po_yt = -bot_ext_info.margins['po'][0]
         top_od_yb = yblk + top_ext_info.margins['od'][0]
         top_po_yb = yblk + top_ext_info.margins['po'][0]
+        # TODO: hack
+        if top_od_yb - bot_od_yt <= od_spy_max:
+            return []
         # step 1B: calculate PO area bounds.  Include OD bounds because substrate rows don't have PO
         po_area_offset = max(bot_od_yt, bot_po_yt)
         po_area_tot = min(top_po_yb, top_od_yb) - po_area_offset
@@ -818,7 +823,7 @@ class MOSTechPlanarGeneric(MOSTech):
             m1_sub_h = max(m1_sub_h, guard_ring_nf * sd_pitch + 2 * sub_m1_extx)
 
         po_types = ('', ) * fg
-        lr_edge_info = EdgeInfo(od_type='sub')
+        lr_edge_info = EdgeInfo(od_type='sub', draw_layers={}, y_intv={})
         ext_top_info = ExtInfo(
             margins=yloc_info['top_margins'],
             od_h=od_h,
@@ -909,7 +914,7 @@ class MOSTechPlanarGeneric(MOSTech):
             # allow substrate row abutment
             arr_yt = 0
 
-        lr_edge_info = EdgeInfo(od_type=None)
+        lr_edge_info = EdgeInfo(od_type=None, draw_layers={}, y_intv={})
         if is_sub_ring_end:
             ext_margins = end_ext_info.margins
             od_margin, od_spy = ext_margins['od']
