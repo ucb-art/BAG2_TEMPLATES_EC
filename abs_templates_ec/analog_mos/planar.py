@@ -1446,9 +1446,6 @@ class MOSTechPlanarGeneric(MOSTech):
             raise ValueError('Differential connection not supported yet.')
 
         layout_info = mos_info['layout_info']
-        print('mos_info')
-        print(mos_info)
-
         sd_yc = mos_info['sd_yc']
 
         lch_unit = layout_info['lch_unit']
@@ -1512,8 +1509,6 @@ class MOSTechPlanarGeneric(MOSTech):
         # draw drain/source vias
         num_s = (seg + 2) // 2
         num_d = seg + 1 - num_s
-        print('dylist')
-        print(d_y_list)
         mx_yb, mx_yt = d_y_list[-1][0] - sd_yc, d_y_list[-1][1] - sd_yc
         od_yb, od_yt = d_y_list[0][0] - sd_yc, d_y_list[0][1] - sd_yc
 
@@ -1832,9 +1827,6 @@ class MOSTechPlanarGeneric(MOSTech):
         lay_name_table = self.config['layer_name']
 
         mos_constants = self.get_mos_tech_constants(lch_unit)
-        print(mos_constants)
-        print('foo')
-        print(drc_info)
         sub_m1_enc_le = mos_constants['sub_m1_enc_le']
         md_w = mos_constants['md_w']
 
@@ -1854,9 +1846,6 @@ class MOSTechPlanarGeneric(MOSTech):
         if mbot_yt is None:
             mbot_yt = mx_yt
 
-        print('mbots')
-        print(mbot_yb)
-        print(mbot_yt)
         for bot_lay_id in range(start_layer, top_layer):
             via_benc_le = bot_enc_le_info[bot_lay_id]
             via_tenc_le = top_enc_le_info[bot_lay_id]
@@ -1939,7 +1928,7 @@ class MOSTechPlanarGeneric(MOSTech):
             return False
         if arr_nmax is not None and num_via > arr_nmax:
             via_sp = arr_sp
-            num_via = (area_h + via_sp) // (via_w + via_sp)
+            num_via = (area_h + via_sp) // (via_h + via_sp)
 
         #Array height calculated using heigth of the via
         via_harr = num_via * (via_h + via_sp) - via_sp #This is the minimum area enclosures should be added
