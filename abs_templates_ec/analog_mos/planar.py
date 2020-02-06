@@ -1441,7 +1441,6 @@ class MOSTechPlanarGeneric(MOSTech):
             raise ValueError('Differential connection not supported yet.')
 
         layout_info = mos_info['layout_info']
-
         sd_yc = mos_info['sd_yc']
 
         lch_unit = layout_info['lch_unit']
