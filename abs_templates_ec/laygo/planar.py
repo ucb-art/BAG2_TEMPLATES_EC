@@ -264,11 +264,11 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         )
 
     def get_laygo_sub_row_info(self, lch_unit, w, mos_type, threshold, **kwargs):
-        # type: (int, int, str, str, **kwargs) -> Dict[str, Any]
+        # type: (int, int, str, str, **Any) -> Dict[str, Any]
         return self.get_laygo_mos_row_info(lch_unit, w, w, mos_type, threshold, '', '', **kwargs)
 
     def get_laygo_blk_info(self, blk_type, w, row_info, **kwargs):
-        # type: (str, int, Dict[str, Any], **kwargs) -> Dict[str, Any]
+        # type: (str, int, Dict[str, Any], **Any) -> Dict[str, Any]
 
         arr_y = row_info['arr_y']
         po_y = row_info['po_y']
@@ -520,7 +520,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
             right_edge_info=lr_edge_info,
         )
 
-    def get_row_extension_info(self,  # type: LaygoTechFinfetBase
+    def get_row_extension_info(self,  # type: LaygoTechPlanarBase
                                bot_ext_list,  # type: List[Union[int, ExtInfo]]
                                top_ext_list,  # type: List[Union[int, ExtInfo]]
                                ):
