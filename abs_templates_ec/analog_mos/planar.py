@@ -1825,8 +1825,8 @@ class MOSTechPlanarGeneric(MOSTech):
         mos_constants = self.get_mos_tech_constants(lch_unit)
 
         od_min_density = mos_constants['od_min_density']
-        od_spx = mos_constants['dod_sp']
-        dod_edge_spx = mos_constants['dod_spy']
+        od_spx = mos_constants['dod_spx']
+        dod_edge_spx = mos_constants['dod_spx']
         dod_fg_min, dod_fg_max = mos_constants.get('dod_fill_fg', (1, 20))
         dpo_edge_spy = mos_constants['dpo_edge_spy']
         po_od_exty = mos_constants['po_od_exty']
