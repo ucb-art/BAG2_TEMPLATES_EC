@@ -1932,7 +1932,6 @@ class MOSTechPlanarGeneric(MOSTech):
         for imp_lay in self.get_mos_layers(mos_type, threshold):
             box = imp_box
             if box.is_physical():
-                pass
                 template.add_rect(imp_lay, box)
 
 
