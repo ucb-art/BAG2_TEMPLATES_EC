@@ -71,7 +71,7 @@ class ResArrayBaseInfo(object):
     """
 
     def __init__(self, grid, sub_type, threshold, **kwargs):
-        # type: (RoutingGrid, str, str, **kwargs) -> None
+        # type: (RoutingGrid, str, str, **Any) -> None
         min_tracks = kwargs.get('min_tracks', None)
         em_specs = kwargs.get('em_specs', None)
         grid_type = kwargs.get('grid_type', 'standard')
@@ -124,7 +124,7 @@ class ResArrayBaseInfo(object):
             self.top_layer = top_layer
 
     def get_res_info(self, l_unit, w_unit, **kwargs):
-        # type: (int, int, **kwargs) -> Dict[str, Any]
+        # type: (int, int, **Any) -> Dict[str, Any]
         res_type = kwargs.get('res_type', self.res_type)
         sub_type = kwargs.get('sub_type', self.sub_type)
         threshold = kwargs.get('threshold', self.threshold)
@@ -178,7 +178,7 @@ class ResArrayBaseInfo(object):
         return dx, dy, wtot, htot, res_info
 
     def get_res_length_bounds(self, **kwargs):
-        # type: (**kwargs) -> Tuple[int, int]
+        # type: (**Any) -> Tuple[int, int]
         res_type = kwargs.get('res_type', self.res_type)
 
         lmin, lmax = self.grid.tech_info.get_res_length_bounds(res_type)
@@ -209,7 +209,7 @@ class ResArrayBase(TemplateBase, metaclass=abc.ABCMeta):
     """
 
     def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
-        # type: (TemplateDB, str, Dict[str, Any], Set[str], **kwargs) -> None
+        # type: (TemplateDB, str, Dict[str, Any], Set[str], **Any) -> None
         TemplateBase.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
         self._layout_info = None  # type: ResArrayBaseInfo
         self._bot_port = None  # type: Port
@@ -370,7 +370,7 @@ class ResArrayBase(TemplateBase, metaclass=abc.ABCMeta):
                                                 mode=mode, unit_mode=True)
 
     def draw_array(self, l, w, sub_type, threshold, nx=1, ny=1, **kwargs):
-        # type: (float, float, str, str, int, int, **kwargs) -> None
+        # type: (float, float, str, str, int, int, **Any) -> None
         """Draws the resistor array.
 
         This method updates the RoutingGrid with resistor routing layers, then add
