@@ -1691,6 +1691,7 @@ class MOSTechPlanarGeneric(MOSTech):
         num_d = seg + 1 - num_s
         mx_yb, mx_yt = d_y_list[-1][0] - sd_yc, d_y_list[-1][1] - sd_yc
         od_yb, od_yt = d_y_list[0][0] - sd_yc, d_y_list[0][1] - sd_yc
+
         drc_info = self.get_conn_drc_info(lch_unit, 'd')
         self._draw_vertical_vias(
             template,
@@ -2216,16 +2217,18 @@ class MOSTechPlanarGeneric(MOSTech):
         yt_min = min(mbot_yt - via_benc_le, mtop_yt - via_tenc_le)
         via_yc = (yb_max + yt_min) // 2
         area_h = yt_min - yb_max
-        num_via = (area_h + via_sp) // (via_w + via_sp)
-        if num_via <= 0:
+        #Number of vias calculated using heigth of the via
+        num_via = (area_h + via_sp) // (via_h + via_sp)
+        if num_via < 0:
             import pdb
             pdb.set_trace()
             return False
         if arr_nmax is not None and num_via > arr_nmax:
             via_sp = arr_sp
-            num_via = (area_h + via_sp) // (via_w + via_sp)
+            num_via = (area_h + via_sp) // (via_h + via_sp)
 
-        via_harr = num_via * (via_w + via_sp) - via_sp
+        #Array height calculated using heigth of the via
+        via_harr = num_via * (via_h + via_sp) - via_sp #This is the minimum area enclosures should be added
         via_yb = via_yc - via_harr // 2
         via_yt = via_yb + via_harr
 
