@@ -10,7 +10,7 @@ from bag.util.search import BinaryIterator
 from bag.layout.util import BBox
 from bag.layout.routing import WireArray, TrackID
 from bag.layout.template import TemplateBase
-from bag.layout.routing.fill import fill_symmetric_min_density_info, fill_symmetric_interval
+from bag.layout.routing.fill import fill_symmetric_min_density_info, fill_symmetric_interval, fill_symmetric_max_density
 
 from .core import MOSTech
 
@@ -30,6 +30,8 @@ AdjRowInfo = namedtuple('AdjRowInfo', [
 ])
 EdgeInfo = namedtuple('EdgeInfo', [
     'od_type',
+    'draw_layers',
+    'y_intv',
 ])
 
 
@@ -66,6 +68,32 @@ class MOSTechPlanarGeneric(MOSTech):
         MOSTech.__init__(self, config, tech_info, mos_entry_name=mos_entry_name)
 
     def get_mos_yloc_info(self, lch_unit, w, **kwargs):
+        """Computes Y coordinates of various layers in the transistor row.
+
+        The returned dictionary should have the following entries:
+
+        blk :
+            a tuple of row bottom/top Y coordinates.
+        po :
+            a tuple of PO bottom/top Y coordinates that's outside of CPO.
+        od :
+            a tuple of OD bottom/top Y coordinates.
+        top_margins :
+            a dictionary of top extension margins and minimum space,
+            which is ((blk_yt - lay_yt), spy) of each layer.
+        bot_margins :
+            a dictionary of bottom extension margins and minimum space,
+            which is ((lay_yb - blk_yb), spy) of each layer.
+        fill_info :
+            a dictionary from metal layer tuple to tuple of exclusion
+            layer name and list of metal fill Y intervals.
+        g_y_list :
+            Y coordinate interval where horizontal gate wires can contact
+            to gate.
+        d_y_list :
+            Y coordinate interval where horizontal drain/source wire can
+            contact to drain/source.
+        """
         # type: (int, float, Any) -> Dict[str, Any]
         # get transistor constants
         mos_constants = self.get_mos_tech_constants(lch_unit)
@@ -231,6 +259,157 @@ class MOSTechPlanarGeneric(MOSTech):
             d_conn_y=mx_y,
         )
 
+    def get_od_w(self, lch_unit, fg):
+        # type: (int, int) -> int
+        """Calculate OD width from number of fingers"""
+        mos_constants = self.get_mos_tech_constants(lch_unit)
+        sd_pitch = mos_constants['sd_pitch']
+        po_od_extx = mos_constants['po_od_extx']
+        od_fill_w = mos_constants['od_fill_w'][0]
+        return max(od_fill_w, (fg - 1) * sd_pitch + lch_unit + 2 * po_od_extx)
+
+    def get_od_w_inverse(self, lch_unit, w, round_up=None):
+        # type: (int, int, bool) -> int
+        """Calculate number of fingers from OD width."""
+        mos_constants = self.get_mos_tech_constants(lch_unit)
+        sd_pitch = mos_constants['sd_pitch']
+        po_od_extx = mos_constants['po_od_extx']
+
+        q = w - 2 * po_od_extx - lch_unit
+        if round_up is None and q % sd_pitch != 0:
+            raise ValueError('OD width %d is not correct.' % w)
+        elif round_up:
+            return 1 - (-q // sd_pitch)
+        else:
+            return 1 + (q // sd_pitch)
+
+    def get_od_h(self, lch_unit, w):
+        # type: (int, float) -> int
+        """Calculate OD height from transistor width"""
+        mos_constants = self.get_mos_tech_constants(lch_unit)
+        po_od_exty = mos_constants['po_od_exty']
+        return w + 2 * po_od_exty
+
+    def get_od_h_inverse(self, lch_unit, od_h):
+        # type: (int, int) -> int
+        """Calculate transistor width from OD height."""
+        mos_constants = self.get_mos_tech_constants(lch_unit)
+        po_od_exty = mos_constants['po_od_exty']
+        return od_h - 2 * po_od_exty
+
+    def _get_dummy_od_yloc(self,  # type: MOSTechPlanarGeneric
+                           lch_unit,  # type: int
+                           yblk,  # type: int
+                           bot_od_h,  # type: Optional[int]
+                           bot_od_yt,  # type: Optional[int]
+                           top_od_h,  # type: Optional[int]
+                           top_od_yb,  # type: Optional[int]
+                           **kwargs):
+        # type: (...) -> List[Tuple[int, int]]
+        """Compute dummy OD Y intervals in extension block.
+
+        This method use fill algorithm to make sure both maximum OD spacing and
+        minimum OD density rules are met.
+
+        When bot_od_h, bot_od_yt, top_od_h, top_od_yb are provided, we are filling space
+        between two rows. Otherwise, we are filling empty space.
+        """
+        guard_ring_nf = kwargs.get('guard_ring_nf', 0)
+
+        mos_constants = self.get_mos_tech_constants(lch_unit)
+        od_min_density = kwargs.get('od_min_density', mos_constants['od_min_density'])
+        od_spy = mos_constants.get('dod_spy', mos_constants['od_spy'])
+        od_spy_max = mos_constants.get('od_spy_max', mos_constants['od_spy_max'])
+        od_w_min, od_w_max = mos_constants['od_fill_w']
+        po_spy = mos_constants['po_spy']
+        po_od_exty = mos_constants['po_od_exty']
+        dpo_edge_spy = mos_constants['dpo_edge_spy']
+
+        if not(guard_ring_nf == 0 or 'od_spy_max_gr' not in mos_constants):
+            od_spy_max = mos_constants['od_spy_max_gr']
+
+        od_spy = max(od_spy, 2 * po_od_exty + po_spy)
+
+        # compute MD/OD locations.
+        # check if we can just not draw anything
+        if yblk == 0 or (top_od_yb is not None and top_od_yb - bot_od_yt <= od_spy_max):
+            return []
+        if top_od_yb is not None:
+            # we are filling between two rows
+            # compute OD fill area needed to meet density
+            od_area_adj = (bot_od_h + top_od_h) // 2
+            od_area_tot = top_od_yb - bot_od_yt + od_area_adj
+            od_area_targ = int(math.ceil(od_area_tot * od_min_density)) - od_area_adj
+
+            offset = bot_od_yt
+            od_fin_area_min = self.get_od_h_inverse(lch_unit, od_area_targ)
+            od_fin_area_tot = top_od_yb - bot_od_yt + 1
+            foe = False
+        else:
+            # we are filling in empty area
+            # compute fill bounds
+            fill_yb = dpo_edge_spy
+            fill_yt = yblk - dpo_edge_spy
+            fill_h = fill_yt - fill_yb
+
+            # check if we can draw anything at all
+            dum_h_min = self.get_od_h(lch_unit, od_w_min)
+            # worst case, we will allow po_spy / 2 margin on edge
+            if yblk < po_spy + dum_h_min:
+                return []
+            # check if we can just draw one dummy
+            if fill_h < dum_h_min * 2 + po_spy:
+                # get od fins. round up to try to meet min edge distance rule
+                od_w = min(od_w_max, self.get_od_h_inverse(lch_unit, fill_h))
+                od_h = self.get_od_h(lch_unit, od_w)
+                od_yb = (fill_yb + fill_yt - od_h) // 2
+                return [(od_yb, od_yb + od_h)]
+
+            # compute OD fill area needed to meet density
+            bot_od = fill_yb + po_od_exty
+            top_od = fill_yt - po_od_exty
+
+            od_area_tot = yblk
+            od_area_targ = int(math.ceil(od_area_tot * od_min_density))
+            od_fin_area_min = self.get_od_h_inverse(lch_unit, od_area_targ)
+            od_fin_area_tot = top_od - bot_od
+
+            offset = bot_od
+            foe = True
+
+        od_fin_area_iter = BinaryIterator(od_fin_area_min, od_fin_area_tot + 1)
+        # binary search on OD fill area
+        while od_fin_area_iter.has_next():
+            # compute fill with fin-area target
+            od_fin_area_targ_cur = od_fin_area_iter.get_next()
+            # TODO: not use 1 and 100
+            fill_info = fill_symmetric_min_density_info(od_fin_area_tot, od_fin_area_targ_cur,
+                                                        1, 100, od_spy,
+                                                        sp_max=od_spy_max, fill_on_edge=foe,
+                                                        cyclic=False)
+            od_nfin_tot_cur = fill_info[0][0]
+
+            # compute actual OD area
+            od_intv_list = fill_symmetric_interval(*fill_info[0][2], offset=offset,
+                                                   invert=fill_info[1])[0]
+            od_area_cur = sum((self.get_od_h(lch_unit, stop - start)
+                               for start, stop in od_intv_list))
+            if od_area_cur >= od_area_targ:
+                od_fin_area_iter.save_info(od_intv_list)
+                od_fin_area_iter.down()
+            else:
+                if (od_nfin_tot_cur < od_fin_area_targ_cur or
+                        od_fin_area_targ_cur == od_fin_area_tot):
+                    # we cannot do any better by increasing od_fin_area_targ
+                    od_fin_area_iter.save_info(od_intv_list)
+                    break
+                else:
+                    od_fin_area_iter.up()
+
+        # convert fin interval to Y coordinates
+        od_intv_list = od_fin_area_iter.get_last_save_info()
+        return od_intv_list
+
     def get_edge_info(self, lch_unit, guard_ring_nf, is_end, **kwargs):
         # type: (int, int, bool, Any) -> Dict[str, Any]
 
@@ -311,6 +490,7 @@ class MOSTechPlanarGeneric(MOSTech):
 
         mos_constants = self.get_mos_tech_constants(lch_unit)
         sd_pitch = mos_constants['sd_pitch']
+        imp_min_h = mos_constants.get("imp_min_h", 0)
 
         yloc_info = self.get_mos_yloc_info(lch_unit, w, **kwargs)
         blk_yb, blk_yt = blk_y = yloc_info['blk']
@@ -326,13 +506,13 @@ class MOSTechPlanarGeneric(MOSTech):
             lay_info_list.append((imp_name, 0, blk_yb, blk_yt))
 
         od_type = 'mos_fake' if ds_dummy else 'mos'
-        lr_edge_info = EdgeInfo(od_type=od_type)
+        lr_edge_info = EdgeInfo(od_type=od_type, draw_layers={}, y_intv={})
         od_h = od_yt - od_yb
         po_types = ('PO', ) * fg
         ext_top_info = ExtInfo(
             margins=yloc_info['top_margins'],
             od_h=od_h,
-            imp_min_h=0,
+            imp_min_h=imp_min_h,
             m1_sub_h=0,
             mtype=mtype,
             thres=threshold,
@@ -343,7 +523,7 @@ class MOSTechPlanarGeneric(MOSTech):
         ext_bot_info = ExtInfo(
             margins=yloc_info['bot_margins'],
             od_h=od_h,
-            imp_min_h=0,
+            imp_min_h=imp_min_h,
             m1_sub_h=0,
             mtype=mtype,
             thres=threshold,
@@ -449,15 +629,15 @@ class MOSTechPlanarGeneric(MOSTech):
         po_h = max(po_h_min, od_w_min + 2 * po_od_exty)
         po_od_exty = (po_h - od_w_min) // 2
         dum_po_yb = -bot_ext_info.margins['po'][0] + po_spy
-        od_bot_margin = max(dum_po_yb + po_od_exty, bot_imp_min_h + imp_od_ency)
+        od_bot_margin = max(dum_po_yb + po_od_exty, imp_od_ency)
         if imp_po_ency is not None:
-            od_bot_margin = max(od_bot_margin, bot_imp_min_h + imp_po_ency + po_od_exty)
+            od_bot_margin = max(od_bot_margin, imp_po_ency + po_od_exty)
 
         # get od_top_margin assuming yt = 0
         dum_po_yt = top_ext_info.margins['po'][0] - po_spy
-        od_top_margin = min(dum_po_yt - po_od_exty, -top_imp_min_h - imp_od_ency)
+        od_top_margin = min(dum_po_yt - po_od_exty, - imp_od_ency)
         if imp_po_ency is not None:
-            od_top_margin = min(od_top_margin, -top_imp_min_h - imp_po_ency - po_od_exty)
+            od_top_margin = min(od_top_margin, - imp_po_ency - po_od_exty)
         od_top_margin *= -1
 
         # get minimum extension width from OD related spacing rules
@@ -497,6 +677,9 @@ class MOSTechPlanarGeneric(MOSTech):
         bot_po_yt = -bot_ext_info.margins['po'][0]
         top_od_yb = yblk + top_ext_info.margins['od'][0]
         top_po_yb = yblk + top_ext_info.margins['po'][0]
+        # TODO: hack
+        if top_od_yb - bot_od_yt <= od_spy_max:
+            return []
         # step 1B: calculate PO area bounds.  Include OD bounds because substrate rows don't have PO
         po_area_offset = max(bot_od_yt, bot_po_yt)
         po_area_tot = min(top_po_yb, top_od_yb) - po_area_offset
@@ -792,6 +975,7 @@ class MOSTechPlanarGeneric(MOSTech):
         sd_pitch = mos_constants['sd_pitch']
         sub_m1_extx = mos_constants['sub_m1_extx']
         draw_sub_od = mos_constants.get('draw_sub_od', True)
+        imp_min_h = mos_constants.get("imp_min_h", 0)
 
         is_sub_ring = kwargs.get('is_sub_ring', False)
         dnw_mode = kwargs.get('dnw_mode', '')
@@ -818,11 +1002,11 @@ class MOSTechPlanarGeneric(MOSTech):
             m1_sub_h = max(m1_sub_h, guard_ring_nf * sd_pitch + 2 * sub_m1_extx)
 
         po_types = ('', ) * fg
-        lr_edge_info = EdgeInfo(od_type='sub')
+        lr_edge_info = EdgeInfo(od_type='sub', draw_layers={}, y_intv={})
         ext_top_info = ExtInfo(
             margins=yloc_info['top_margins'],
             od_h=od_h,
-            imp_min_h=0,
+            imp_min_h=imp_min_h,
             m1_sub_h=m1_sub_h,
             mtype=mtype,
             thres=threshold,
@@ -833,7 +1017,7 @@ class MOSTechPlanarGeneric(MOSTech):
         ext_bot_info = ExtInfo(
             margins=yloc_info['bot_margins'],
             od_h=od_h,
-            imp_min_h=0,
+            imp_min_h=imp_min_h,
             m1_sub_h=m1_sub_h,
             mtype=mtype,
             thres=threshold,
@@ -897,6 +1081,7 @@ class MOSTechPlanarGeneric(MOSTech):
         sd_pitch = mos_constants['sd_pitch']
         edge_margin = mos_constants['edge_margin']
         nw_dnw_ext = mos_constants['nw_dnw_ext']
+        imp_min_h = mos_constants.get("imp_min_h", 0)
 
         if dnw_mode and not is_sub_ring_end:
             edge_margin = dnw_margins[dnw_mode] - nw_dnw_ext
@@ -909,7 +1094,7 @@ class MOSTechPlanarGeneric(MOSTech):
             # allow substrate row abutment
             arr_yt = 0
 
-        lr_edge_info = EdgeInfo(od_type=None)
+        lr_edge_info = EdgeInfo(od_type=None, draw_layers={}, y_intv={})
         if is_sub_ring_end:
             ext_margins = end_ext_info.margins
             od_margin, od_spy = ext_margins['od']
@@ -929,7 +1114,7 @@ class MOSTechPlanarGeneric(MOSTech):
                     mx=(arr_yt + mx_margin, mx_spy),
                 ),
                 od_h=end_ext_info.od_h,
-                imp_min_h=0,
+                imp_min_h=imp_min_h,
                 m1_sub_h=0,
                 mtype=end_ext_info.mtype,
                 thres=threshold,
@@ -1506,6 +1691,7 @@ class MOSTechPlanarGeneric(MOSTech):
         num_d = seg + 1 - num_s
         mx_yb, mx_yt = d_y_list[-1][0] - sd_yc, d_y_list[-1][1] - sd_yc
         od_yb, od_yt = d_y_list[0][0] - sd_yc, d_y_list[0][1] - sd_yc
+
         drc_info = self.get_conn_drc_info(lch_unit, 'd')
         self._draw_vertical_vias(
             template,
@@ -1631,7 +1817,124 @@ class MOSTechPlanarGeneric(MOSTech):
 
     def draw_active_fill(self, template, mos_type, threshold, w, h):
         # type: (TemplateBase, str, str, int, int) -> None
-        raise ValueError('Active fill not yet supported.')
+        """Draw active fill in given area
+
+        w and h are expected in unit mode
+        """
+        mos_layer_table = self.config['mos_layer_table']
+        lch_unit = self.mos_config['dum_lch']
+        mos_constants = self.get_mos_tech_constants(lch_unit)
+
+        od_min_density = mos_constants['od_min_density']
+        od_spx = mos_constants['dod_spx']
+        dod_edge_spx = mos_constants['dod_spx']
+        dod_fg_min, dod_fg_max = mos_constants.get('dod_fill_fg', (1, 20))
+        dpo_edge_spy = mos_constants['dpo_edge_spy']
+        po_od_exty = mos_constants['po_od_exty']
+        po_od_extx = mos_constants['po_od_extx']
+        po_spx = mos_constants['dpo_sp']
+        sd_pitch = mos_constants['sd_pitch']
+        imp_od_encx = mos_constants['imp_od_encx']
+        imp_po_ency = mos_constants['imp_od_ency']
+
+        # compute fill X intervals
+        fill_xl = dod_edge_spx
+        fill_xr = w - dod_edge_spx
+        fill_yb = dpo_edge_spy
+        fill_yt = h - dpo_edge_spy
+        fill_w = fill_xr - fill_xl
+
+        dum_spx = max(od_spx - 2 * (sd_pitch - po_od_extx), po_spx)
+
+        # check if we can draw anything at all
+        dum_w_min = self.get_od_w(lch_unit, dod_fg_min)
+        if fill_w < dum_w_min:
+            return
+        # check if we can just draw one dummy
+        if fill_w < dum_w_min * 2 + dum_spx:
+            # get number of fingers. round up to try to meet min edge distance rule
+            fg = min(dod_fg_max, self.get_od_w_inverse(lch_unit, fill_w, round_up=False))
+            od_w = self.get_od_w(lch_unit, fg)
+            od_xl = (fill_xl + fill_xr - od_w) // 2
+            od_x_list = [(od_xl, od_xl + od_w)]
+            od_x_density = od_w / w
+        else:
+            # check if we can only draw two dummies
+            fg = self.get_od_w_inverse(lch_unit, (fill_w - dum_spx) // 2, round_up=False)
+            if fg <= dod_fg_max:
+                od_w = self.get_od_w(lch_unit, fg)
+                od_x_list = [(fill_xl, fill_xl + od_w), (fill_xr - od_w, fill_xr)]
+                od_x_density = (2 * od_w) / w
+            else:
+                # draw regular array
+                fg_tot = ((fill_w - 2 * po_od_extx - lch_unit) // sd_pitch) + 3
+                sp_fg = -(-(dum_spx - sd_pitch + lch_unit) // sd_pitch)
+                fg_intv_list = fill_symmetric_max_density(fg_tot, fg_tot, dod_fg_min + 2,
+                                                          dod_fg_max + 2, sp_fg,
+                                                          fill_on_edge=True, cyclic=False)[0]
+                tot_w = self.get_od_w(lch_unit, fg_tot - 2)
+                x_off = fill_xl + (fill_w - tot_w) // 2
+                od_x_list = []
+                od_area = 0
+                for fg_start, fg_stop in fg_intv_list:
+                    od_w_cur = self.get_od_w(lch_unit, fg_stop - fg_start - 2)
+                    od_area += od_w_cur
+                    x0 = fg_start * sd_pitch + x_off
+                    od_x_list.append((x0, x0 + od_w_cur))
+                od_x_density = od_area / w
+
+        # compute fill Y intervals
+        od_y_density = od_min_density / od_x_density
+
+        po_min_density = mos_constants.get('po_min_density', None)
+        if po_min_density:
+            po_x_area = 0
+            for od_xl, od_xr in od_x_list:
+                po_xl = od_xl + po_od_extx - sd_pitch
+                po_xr = po_xl + lch_unit
+                nx = 1 + ((od_xr - po_xr - po_od_extx + sd_pitch) // sd_pitch)
+                po_x_area += nx * lch_unit
+            po_x_density = po_x_area / w
+            po_y_density = po_min_density / po_x_density
+            density_targ = max(od_y_density, po_y_density)
+        else:
+            density_targ = od_y_density
+
+        od_y_list = self._get_dummy_od_yloc(lch_unit, h, None, None, None, None,
+                                            od_min_density=density_targ)
+        if not od_y_list:
+            return
+
+        # draw fills
+        res = template.grid.resolution
+        ny = len(od_y_list)
+        po_lay = mos_layer_table['PO_dummy']
+        od_lay = mos_layer_table['OD_dummy']
+        for idx, (od_yb, od_yt) in enumerate(od_y_list):
+            po_yb = fill_yb if idx == 0 else od_yb - po_od_exty
+            po_yt = fill_yt if idx == ny - 1 else od_yt + po_od_exty
+            for od_xl, od_xr in od_x_list:
+                box = BBox(od_xl, od_yb, od_xr, od_yt, res, unit_mode=True)
+                self.draw_od(template, od_lay, box)
+                po_xl = od_xl + po_od_extx
+                po_xr = po_xl + lch_unit
+                nx = 1 + ((od_xr - po_xr - po_od_extx) // sd_pitch)
+                template.add_rect(po_lay, BBox(po_xl, po_yb, po_xr, po_yt, res, unit_mode=True),
+                                  nx=nx, spx=sd_pitch, unit_mode=True)
+
+        # draw other layers
+        od_xl = od_x_list[0][0]
+        od_xr = od_x_list[-1][1]
+        imp_xl = min(fill_xl, od_xl - imp_od_encx)
+        imp_xr = max(fill_xr, od_xr + imp_od_encx)
+        imp_yb = fill_yb - imp_po_ency
+        imp_yt = fill_yt + imp_po_ency
+        imp_box = BBox(imp_xl, imp_yb, imp_xr, imp_yt, res, unit_mode=True)
+        for imp_lay in self.get_mos_layers(mos_type, threshold):
+            box = imp_box
+            if box.is_physical():
+                template.add_rect(imp_lay, box)
+
 
     def _draw_g_vias(self,
                      template,
@@ -1914,16 +2217,18 @@ class MOSTechPlanarGeneric(MOSTech):
         yt_min = min(mbot_yt - via_benc_le, mtop_yt - via_tenc_le)
         via_yc = (yb_max + yt_min) // 2
         area_h = yt_min - yb_max
-        num_via = (area_h + via_sp) // (via_w + via_sp)
-        if num_via <= 0:
+        #Number of vias calculated using heigth of the via
+        num_via = (area_h + via_sp) // (via_h + via_sp)
+        if num_via < 0:
             import pdb
             pdb.set_trace()
             return False
         if arr_nmax is not None and num_via > arr_nmax:
             via_sp = arr_sp
-            num_via = (area_h + via_sp) // (via_w + via_sp)
+            num_via = (area_h + via_sp) // (via_h + via_sp)
 
-        via_harr = num_via * (via_w + via_sp) - via_sp
+        #Array height calculated using heigth of the via
+        via_harr = num_via * (via_h + via_sp) - via_sp #This is the minimum area enclosures should be added
         via_yb = via_yc - via_harr // 2
         via_yt = via_yb + via_harr
 

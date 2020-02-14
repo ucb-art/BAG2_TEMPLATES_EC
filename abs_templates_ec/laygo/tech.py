@@ -128,7 +128,7 @@ class LaygoTech(MOSTech, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_laygo_sub_row_info(self, lch_unit, w, mos_type, threshold, **kwargs):
-        # type: (int, int, str, str, **kwargs) -> Dict[str, Any]
+        # type: (int, int, str, str, **Any) -> Dict[str, Any]
         """Returns the information dictionary for laygo substrate row.
 
         Parameters
@@ -192,7 +192,7 @@ class LaygoTech(MOSTech, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_laygo_blk_info(self, blk_type, w, row_info, **kwargs):
-        # type: (str, int, Dict[str, Any], **kwargs) -> Dict[str, Any]
+        # type: (str, int, Dict[str, Any], **Any) -> Dict[str, Any]
         """Returns the layout information dictionary for the given laygo block.
 
         Parameters
@@ -226,7 +226,7 @@ class LaygoTech(MOSTech, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_laygo_end_info(self, lch_unit, mos_type, threshold, fg, is_end, blk_pitch, **kwargs):
-        # type: (int, str, str, int, bool, int, **kwargs) -> Dict[str, Any]
+        # type: (int, str, str, int, bool, int, **Any) -> Dict[str, Any]
         """Returns the LaygoBase end row layout information dictionary.
 
         Parameters
@@ -342,6 +342,14 @@ class LaygoTech(MOSTech, metaclass=abc.ABCMeta):
             True if the two source wires of fg2d is shorted together
         """
         return self.mos_config['laygo_fg2d_s_short']
+
+    def can_short_ds_conn_layer(self):
+        # type: () -> bool
+        """
+        Returns True if the drain and source ports on dig_conn_layer of adjacent rows with gate connection in the
+        middle, can be shorted without violating spacing to gate connections
+        """
+        return self.mos_config.get('laygo_short_ds_conn_layer', True)
 
     def get_sub_columns(self, lch_unit):
         # type: (int) -> int
