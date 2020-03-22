@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING, Dict, Any, List, Tuple, Union
 
 import abc
+from collections import namedtuple
 
 from bag import float_to_si_string
 from bag.layout.routing.fill import fill_symmetric_max_density
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
 
 from bag.math import lcm
 from bag.layout.util import BBox
+
+FillInfo = namedtuple('FillInfo', ['layer', 'exc_layer', 'x_intv_list', 'y_intv_list'])
 
 
 class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta):
@@ -41,7 +44,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         LaygoTech.__init__(self, config, tech_info, mos_entry_name=mos_entry_name)
 
     def get_laygo_row_yloc_info(self, lch_unit, w, is_sub, **kwargs):
-        # type: (int, int, bool, **kwargs) -> Dict[str, Any]
+        # type: (int, int, bool, **Any) -> Dict[str, Any]
         analog = kwargs.pop('analog', False)
 
         mos_constants = self.get_mos_tech_constants(lch_unit)
@@ -88,7 +91,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
 
     @abc.abstractmethod
     def get_laygo_blk_yloc_info(self, w, blk_type, row_info, **kwargs):
-        # type: (int, str, Dict[str, Any], **kwargs) -> Dict[str, Any]
+        # type: (int, str, Dict[str, Any], **Any) -> Dict[str, Any]
         """Computes Y coordinates of various layers in the laygo block.
 
         The returned dictionary should have the following entries:
@@ -102,7 +105,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
 
     @abc.abstractmethod
     def draw_laygo_g_connection(self, template, mos_info, g_loc, num_fg, **kwargs):
-        # type: (TemplateBase, Dict[str, Any], str, int, **kwargs) -> List[WireArray]
+        # type: (TemplateBase, Dict[str, Any], str, int, **Any) -> List[WireArray]
         """Draw laygo gate connections.
 
         Parameters
@@ -127,7 +130,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
 
     @abc.abstractmethod
     def draw_laygo_ds_connection(self, template, mos_info, tidx_list, ds_code, **kwargs):
-        # type: (TemplateBase, Dict[str, Any], List[Union[float, int]], int, **kwargs) -> List[WireArray]
+        # type: (TemplateBase, Dict[str, Any], List[Union[float, int]], int, **Any) -> List[WireArray]
         """Draw laygo drain/source connections.
 
         Parameters
@@ -150,7 +153,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
 
     @abc.abstractmethod
     def draw_laygo_sub_connection(self, template, mos_info, **kwargs):
-        # type: (TemplateBase, Dict[str, Any], **kwargs) -> List[WireArray]
+        # type: (TemplateBase, Dict[str, Any], **Any) -> List[WireArray]
         """Draw laygo substrate connections.
 
         Parameters
@@ -173,7 +176,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         # type: () -> Any
         return EdgeInfo(od_type=None, draw_layers={}, y_intv={}), []
 
-    def get_laygo_mos_row_info(self,  # type: LaygoTechFinfetBase
+    def get_laygo_mos_row_info(self,  # type: LaygoTechPlanarBase
                                lch_unit,  # type: int
                                w_max,  # type: int
                                w_sub,  # type: int
@@ -193,7 +196,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         blk_yb, blk_yt = row_yloc_info['blk']
         po_yloc = row_yloc_info['po']
         od_yloc = row_yloc_info['od']
-        #md_yloc = row_yloc_info['md']
+        # md_yloc = row_yloc_info['md']
         top_margins = row_yloc_info['top_margins']
         bot_margins = row_yloc_info['bot_margins']
         fill_info = row_yloc_info['fill_info']
@@ -251,7 +254,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
             arr_y=blk_y,
             od_y=od_yloc,
             po_y=po_yloc,
-            #md_y=md_yloc,
+            # md_y=md_yloc,
             ext_top_info=ext_top_info,
             ext_bot_info=ext_bot_info,
             lay_info_list=lay_info_list,
@@ -264,11 +267,11 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         )
 
     def get_laygo_sub_row_info(self, lch_unit, w, mos_type, threshold, **kwargs):
-        # type: (int, int, str, str, **kwargs) -> Dict[str, Any]
+        # type: (int, int, str, str, **Any) -> Dict[str, Any]
         return self.get_laygo_mos_row_info(lch_unit, w, w, mos_type, threshold, '', '', **kwargs)
 
     def get_laygo_blk_info(self, blk_type, w, row_info, **kwargs):
-        # type: (str, int, Dict[str, Any], **kwargs) -> Dict[str, Any]
+        # type: (str, int, Dict[str, Any], **Any) -> Dict[str, Any]
 
         arr_y = row_info['arr_y']
         po_y = row_info['po_y']
@@ -288,14 +291,14 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         # get Y coordinate information dictionary
         yloc_info = self.get_laygo_blk_yloc_info(w, blk_type, row_info, **kwargs)
         od_yloc = yloc_info['od']
-        #md_yloc = yloc_info['md']
+        # md_yloc = yloc_info['md']
 
         # figure out various properties of the current laygo block
         is_sub = (row_type == sub_type)
         
         y_intv = dict(od=od_yloc, 
-                      #md=md_yloc,
-                     )
+                      # md=md_yloc,
+                      )
 
         if blk_type.startswith('fg1'):
             mtype = (row_type, row_type)
@@ -305,7 +308,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
             edgel_info = edger_info = EdgeInfo(od_type=od_type, draw_layers={}, y_intv=y_intv)
             po_types = ('PO',)
         elif blk_type == 'sub':
-            #deletes poly in sub tap cell because i dont want to complicate PM doping layer setup
+            # deletes poly in sub tap cell because i dont want to complicate PM doping layer setup
             po_y = (0,0)
             
             mtype = (sub_type, row_type)
@@ -374,7 +377,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
                                    od_type=(od_type, sub_type),
                                    po_y=po_y,
                                    ), ],
-            sub_y_list = [(13, 53), (-1, 67), (-1, 67)],    
+            sub_y_list=[(13, 53), (-1, 67), (-1, 67)],
                                
             lay_info_list=lay_info_list,
             sub_type=sub_type,
@@ -393,7 +396,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         )
 
     def get_laygo_end_info(self, lch_unit, mos_type, threshold, fg, is_end, blk_pitch, **kwargs):
-        # type: (int, str, str, int, bool, int, **kwargs) -> Dict[str, Any]
+        # type: (int, str, str, int, bool, int, **Any) -> Dict[str, Any]
         return self.get_analog_end_info(lch_unit, mos_type, threshold, fg, is_end,
                                         blk_pitch, **kwargs)
 
@@ -419,30 +422,29 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         sd_pitch = mos_constants['sd_pitch']
         od_fill_w_max = None
         
-        ####TODO####
-        #This probably needs to come from get_mos_tech_constants, 
-        #but its not super sensitive because of the // done in od_spx_fg
-        #this works for now
+        # TODO
+        # This probably needs to come from get_mos_tech_constants,
+        # but its not super sensitive because of the // done in od_spx_fg
+        # this works for now
         od_spx = lch_unit
-        ##########
-        
+
         od_spx_fg = -(-(od_spx - sd_pitch + lch_unit) // sd_pitch) + 2
         
         # get OD fill X interval
         area = num_blk - 2 * od_spx_fg
         if area > 0:
             if od_fill_w_max is None:
-                #od_x_list = [(od_spx_fg, num_blk - od_spx_fg)]
+                # od_x_list = [(od_spx_fg, num_blk - od_spx_fg)]
                 od_x = (od_spx_fg, num_blk - od_spx_fg)
             else:
-                raise Exception('Greg is not rewriteing planar to accomodate od_list')
-                od_fg_max = (od_fill_w_max - lch_unit) // sd_pitch - 1
-                od_x_list = fill_symmetric_max_density(area, area, 2, od_fg_max, od_spx_fg,
-                                                       offset=od_spx_fg, fill_on_edge=True,
-                                                       cyclic=False)[0]
+                raise Exception('Greg is not rewriting planar to accomodate od_list')
+                # od_fg_max = (od_fill_w_max - lch_unit) // sd_pitch - 1
+                # od_x_list = fill_symmetric_max_density(area, area, 2, od_fg_max, od_spx_fg,
+                #                                        offset=od_spx_fg, fill_on_edge=True,
+                #                                        cyclic=False)[0]
             draw_od = True
         else:
-            #This is just a reasonable dummy value since draw_od is false
+            # This is just a reasonable dummy value since draw_od is false
             od_x = (1,2)            
             draw_od = False
 
@@ -468,9 +470,9 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
             elif cur_idx < od_spx_fg or cur_idx >= num_blk - od_spx_fg:
                 po_types.append('PO_dummy')
 
-            #elif od_intv_idx < len(od_x_list):
+            # elif od_intv_idx < len(od_x_list):
             elif od_intv_idx < 1:
-                #cur_od_intv = od_x_list[od_intv_idx]
+                # cur_od_intv = od_x_list[od_intv_idx]
                 cur_od_intv = od_x
                 if cur_od_intv[1] == cur_idx:
                     po_types.append('PO_edge_dummy')
@@ -520,7 +522,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
             right_edge_info=lr_edge_info,
         )
 
-    def get_row_extension_info(self,  # type: LaygoTechFinfetBase
+    def get_row_extension_info(self,  # type: LaygoTechPlanarBase
                                bot_ext_list,  # type: List[Union[int, ExtInfo]]
                                top_ext_list,  # type: List[Union[int, ExtInfo]]
                                ):
@@ -614,7 +616,6 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         # type: (Dict[str, Any], TechInfoConfig, str) -> None
         MOSTechPlanarGeneric.__init__(self, config, tech_info, mos_entry_name=mos_entry_name)
 
-    
     def get_laygo_conn_yloc_info(self, lch_unit, od_y, is_sub):
         # type: (int, Tuple[int, int], bool) -> Dict[str, Any]
         mos_constants = self.get_mos_tech_constants(lch_unit)
@@ -627,7 +628,6 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
 
         d_m1_top_exty = d_conn_info[1]['top_ext']
         d_m1_bot_exty = d_conn_info[1]['bot_ext']
-
 
         # compute gate/drain connection parameters
         g_m1_h = g_conn_info[1]['min_len']
@@ -654,9 +654,8 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         )
 
     def get_laygo_row_yloc_info(self, lch_unit, w, is_sub, **kwargs):
-        # type: (int, int, bool, **kwargs) -> Dict[str, Any]
+        # type: (int, int, bool, **Any) -> Dict[str, Any]
         analog = kwargs.pop('analog', False)
-        
 
         mos_constants = self.get_mos_tech_constants(lch_unit)
         
@@ -678,8 +677,7 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         po_yb, po_yt = po_y = yloc_info['po']
         od_yb, od_yt = od_y = yloc_info['od']
         top_margins = yloc_info['top_margins']
-        bot_margins = yloc_info['bot_margins'] 
-        
+        bot_margins = yloc_info['bot_margins']
         
         # get wire coordinates
         conn_yloc_info = self.get_laygo_conn_yloc_info(lch_unit, od_y, is_sub)
@@ -702,7 +700,7 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         )
 
     def get_laygo_blk_yloc_info(self, w, blk_type, row_info, **kwargs):
-        # type: (int, str, Dict[str, Any], **kwargs) -> Dict[str, Any]
+        # type: (int, str, Dict[str, Any], **Any) -> Dict[str, Any]
         imp_min_g = kwargs.get('imp_min_g', False)
 
         lch_unit = row_info['lch_unit']
@@ -726,7 +724,6 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         # type: (TemplateBase, Dict[str, Any], Any, Any) -> None
         pass
 
-
     def _draw_g_via(self, template, lch_unit, m1_yb, m1_yt, x_list, r_list, l_list):
         mos_lay_table = self.config['mos_layer_table']
         via_table = self.config['via_id']
@@ -735,8 +732,7 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         mos_constants = self.get_mos_tech_constants(lch_unit)
         sd_pitch = mos_constants['sd_pitch']
         g_via_info = mos_constants['laygo_g_via']
-        
-        
+
         g_v0_w, g_v0_h = g_via_info['dim'][0]
         
         g_m1_h = g_v0_h + 2*g_via_info['top_enc_le'][0]
@@ -757,20 +753,19 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         for xc, rflag, lflag in zip(x_list, r_list, l_list):
             if rflag:
                 template.add_via_primitive(via_id, [xc + sd_pitch//2, g_m1_yc], enc1=enc1, enc2=enc2, unit_mode=True)
-                template.add_rect(('M1', 'drawing'), BBox(xc , g_m1_yb, xc + sd_pitch//2 + g_v0_w//2 + top_encx, m1_yt, self.res,
-                                               unit_mode=True))
+                template.add_rect(('M1', 'drawing'), BBox(xc, g_m1_yb, xc + sd_pitch//2 + g_v0_w//2 + top_encx, m1_yt, self.res,
+                                                          unit_mode=True))
 
             if lflag:
                 template.add_via_primitive(via_id, [xc - sd_pitch//2, g_m1_yc], enc1=enc1, enc2=enc2, unit_mode=True)
                 template.add_rect(('M1', 'drawing'), BBox(xc - sd_pitch//2 - g_v0_w//2 - top_encx , g_m1_yb, xc , m1_yt, self.res,
-                                               unit_mode=True))
+                                                          unit_mode=True))
 
     def _draw_ds_via(self, template, lch_unit, od_yb, od_yt, x_list):
         mos_lay_table = self.config['mos_layer_table']
         via_table = self.config['via_id']
         layer_table = self.config['layer_name']
         mos_constants = self.get_mos_tech_constants(lch_unit)
-
 
         d_conn_w = mos_constants['laygo_d_conn_w'][0]
         d_via_info = mos_constants['laygo_d_via']
@@ -785,8 +780,6 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         d_v0_m1_ency = d_via_info['top_enc_le'][0]
         d_v0_n = (w_unit - 2 * d_v0_od_ency + d_v0_sp) // (d_v0_h + d_v0_sp)
         d_v0_arrh = d_v0_n * (d_v0_h + d_v0_sp) - d_v0_sp
-
-
         
         bot_encx = (d_conn_w - d_v0_w) // 2
         top_encx = (d_conn_w - d_v0_w) // 2
@@ -795,16 +788,15 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         enc1 = [bot_encx, bot_encx, bot_ency, bot_ency]
         enc2 = [top_encx, top_encx, top_ency, top_ency]
 
-
         conn_layer = self.get_dig_conn_layer()
         via_id = via_table[(mos_lay_table['OD'], layer_table[conn_layer])]
 
         for xc in x_list:
-            template.add_via_primitive(via_id, [xc, od_yb + w_unit//2 ], enc1=enc1, enc2=enc2,
+            template.add_via_primitive(via_id, [xc, od_yb + w_unit // 2], enc1=enc1, enc2=enc2,
                                        num_rows=d_v0_n, sp_rows=d_v0_sp, unit_mode=True)
 
     def draw_laygo_g_connection(self, template, mos_info, g_loc, num_fg, **kwargs):
-        # type: (TemplateBase, Dict[str, Any], str, int, **kwargs) -> List[WireArray]
+        # type: (TemplateBase, Dict[str, Any], str, int, **Any) -> List[WireArray]
         layout_info = mos_info['layout_info']
         lch_unit = layout_info['lch_unit']
         od_y = layout_info['row_info_list'][0].od_y
@@ -842,8 +834,7 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         return warrs
 
     def draw_laygo_ds_connection(self, template, mos_info, tidx_list, **kwargs):
-
-        # type: (TemplateBase, Dict[str, Any], List[Union[float, int]], **kwargs) -> List[WireArray]
+        # type: (TemplateBase, Dict[str, Any], List[Union[float, int]], **Any) -> List[WireArray]
         layout_info = mos_info['layout_info']
         lch_unit = layout_info['lch_unit']
         od_y = layout_info['row_info_list'][0].od_y
@@ -854,7 +845,6 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         conn_layer = self.get_dig_conn_layer()
         x_list = [template.grid.track_to_coord(conn_layer, tr_idx, unit_mode=True)
                   for tr_idx in tidx_list]
-       
                        
         self._draw_ds_via(template, lch_unit, od_y[0], od_y[1], x_list)
 
@@ -864,8 +854,7 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         return warrs
 
     def draw_laygo_sub_connection(self, template, mos_info, **kwargs):
-
-        # type: (TemplateBase, Dict[str, Any], **kwargs) -> List[WireArray]
+        # type: (TemplateBase, Dict[str, Any], **Any) -> List[WireArray]
         layout_info = mos_info['layout_info']
         is_sub_row = layout_info['is_sub_row']
         lch_unit = layout_info['lch_unit']
@@ -901,7 +890,7 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         return warrs
 
     def get_laygo_mos_yloc_info(self, lch_unit, w, **kwargs):
-        # type: (int, float, **kwargs) -> Dict[str, Any]
+        # type: (int, float, **Any) -> Dict[str, Any]
         # get transistor constants
         mos_constants = self.get_mos_tech_constants(lch_unit)
         od_spy = mos_constants['od_spy']
@@ -915,9 +904,6 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
 
         g_drc_info = self.get_conn_drc_info(lch_unit, 'g', is_laygo=True)
         drc_info = self.get_conn_drc_info(lch_unit, 'd', is_laygo=True)
-        
-        #pdb.set_trace()
-
 
         # convert w to resolution units
         layout_unit = self.config['layout_unit']
@@ -925,10 +911,9 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         w_unit = int(round(w / layout_unit / res))
 
         # get minimum metal lengths
-        #m1_min_len = drc_info[1]['min_len']
-        #g_m1_w = g_drc_info[1]['w']        
+        # m1_min_len = drc_info[1]['min_len']
+        # g_m1_w = g_drc_info[1]['w']
         m1_spy = max((info['sp_le'] for info in drc_info.values()))
-
 
         # compute gate location, based on PO-PO spacing
         po_yb = po_spy // 2
@@ -940,9 +925,8 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         g_m1_yt = g_co_yt + g_via_info['top_enc_le'][0]
         g_m1_yb = g_m1_yt - g_drc_info[1]['min_len']
 
-        #g_mx_yt = g_co_yc + g_via_info['dim'][0][1] + g_via_info['top_enc_le'][0]
-        #g_mx_yb = g_mx_yt - md_min_len
-
+        # g_mx_yt = g_co_yc + g_via_info['dim'][0][1] + g_via_info['top_enc_le'][0]
+        # g_mx_yb = g_mx_yt - md_min_len
 
         # compute drain/source location
         # first, get OD location from od_gd_spy
@@ -962,8 +946,6 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         m1_h = max(drc_info[1]['min_len'], d_v0_arrh + 2 * d_v0_m1_ency)
         d_m1_yb = od_yc
 
-        #pdb.set_trace()
-
         # check sp_gd_m1 spec, move everything up if necessary
         delta = m1_gd_spy - (d_m1_yb - g_m1_yt)
         if delta > 0:
@@ -971,7 +953,6 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
             od_yt += delta
             od_yb += delta
             od_yc += delta
-
 
         # compute final locations
         d_m1_yt = d_m1_yb + m1_h
@@ -1004,7 +985,7 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         )
 
     def get_laygo_sub_yloc_info(self, lch_unit, w, **kwargs):
-        # type: (int, float, **kwargs) -> Dict[str, Any]
+        # type: (int, float, **Any) -> Dict[str, Any]
         dnw_mode = kwargs.get('dnw_mode', '')
         blk_pitch = kwargs.get('blk_pitch', 1)
 
@@ -1051,7 +1032,7 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
         d_v0_n = (od_h - 2 * d_v0_od_ency + d_v0_sp) // (d_v0_h + d_v0_sp)
         d_v0_arrh = d_v0_n * (d_v0_h + d_v0_sp) - d_v0_sp
         
-        #mx_h = max(md_min_len, d_v0_arrh + 2 * sub_m1_enc_le)
+        # mx_h = max(md_min_len, d_v0_arrh + 2 * sub_m1_enc_le)
         mx_h = max(md_min_len, d_v0_arrh + 2 * sub_m1_enc_le, od_h)
 
         d_mx_yb = od_yc - mx_h // 2
@@ -1065,17 +1046,16 @@ class LaygoTechPlanarGeneric(LaygoTechPlanarBase):
             top_margins=dict(
                 od=(blk_yt - od_yt, od_spy),
                 po=(blk_yt, po_spy),
-                #mx=(blk_yt - d_mx_yt, mx_spy),
+                # mx=(blk_yt - d_mx_yt, mx_spy),
                 m1=(blk_yt - d_mx_yt, mx_spy),
             ),
             bot_margins=dict(
                 od=(od_yb, od_spy),
                 po=(blk_yt, po_spy),
-                #mx=(d_mx_yb, mx_spy),
+                # mx=(d_mx_yb, mx_spy),
                 m1=(d_mx_yb, mx_spy),
             ),
             fill_info={},
             g_conn_y=mx_y,
             d_conn_y=mx_y,
         )
-    
