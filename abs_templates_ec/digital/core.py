@@ -132,6 +132,10 @@ class DigitalBase(TemplateBase, metaclass=abc.ABCMeta):
         return self._laygo_info
 
     @property
+    def can_short_ds_conn_layer(self):
+        return self._laygo_info.can_short_ds_conn_layer
+
+    @property
     def row_layout_info(self):
         return self._row_layout_info
 
