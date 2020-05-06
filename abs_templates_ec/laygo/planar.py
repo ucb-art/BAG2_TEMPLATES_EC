@@ -601,8 +601,8 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
         elif blk_type == 'sub':
             warrs = self.draw_laygo_sub_connection(template, mos_info, **options)
             port_name = 'VDD' if sub_type == 'ntap' else 'VSS'
-            s_warrs = warrs[0::2]
-            d_warrs = warrs[1::2]
+            s_warrs = warrs[0::1]
+            d_warrs = warrs[0::1]
             template.add_pin(port_name, s_warrs, show=False)
             template.add_pin(port_name + '_s', s_warrs, show=False)
             template.add_pin(port_name + '_d', d_warrs, show=False)

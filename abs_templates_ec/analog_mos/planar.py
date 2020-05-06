@@ -763,6 +763,7 @@ class MOSTechPlanarGeneric(MOSTech):
         thres_layers_info_struct = mos_constants['thres_layers']
         sd_pitch = mos_constants['sd_pitch']
         po_od_exty = mos_constants['po_od_exty']
+        po_spy = mos_constants['po_spy']
 
         yt = w * mos_pitch
         yc = yt // 2
@@ -777,6 +778,10 @@ class MOSTechPlanarGeneric(MOSTech):
         top_imp = 'nch' if top_row_type == 'nch' or top_row_type == 'ptap' else 'pch'
 
         po_y_list = self._get_dummy_po_y_list(lch_unit, bot_ext_info, top_ext_info, yt)
+        if po_y_list:
+            # TODO: hack
+            # maximize PO dummy to satisfy poly density
+            po_y_list = [(po_spy // 2, yt - po_spy // 2)]
 
         lay_info_list = []
         if not po_y_list:
@@ -790,9 +795,15 @@ class MOSTechPlanarGeneric(MOSTech):
             # get PO Y coordinates
             num_dod = len(po_y_list)
             od_y_list = []
+            od_dum_max_h = mos_constants.get('od_dum_max_h', None)
             for po_yb, po_yt in po_y_list:
                 od_yb = po_yb + po_od_exty
                 od_yt = po_yt - po_od_exty
+                if od_dum_max_h:
+                    if od_yt - od_yb > od_dum_max_h:
+                        od_yc = (od_yb + od_yt) // 2
+                        od_yb = od_yc - od_dum_max_h // 2
+                        od_yt = od_yb + od_dum_max_h
                 od_y_list.append((od_yb, od_yt))
 
             # compute implant split Y coordinates
