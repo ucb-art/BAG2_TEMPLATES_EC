@@ -389,7 +389,7 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
                                    od_type=(od_type, sub_type),
                                    po_y=po_y,
                                    ), ],
-            sub_y_list=[(13, 53), (-1, 67), (-1, 67)],
+            sub_y_list=[od_yloc, (-1, 67), (-1, 67)],
                                
             lay_info_list=lay_info_list,
             sub_type=sub_type,
@@ -516,12 +516,12 @@ class LaygoTechPlanarBase(MOSTechPlanarGeneric, LaygoTech, metaclass=abc.ABCMeta
             arr_y=arr_y,
             draw_od=draw_od,
             row_info_list=row_info_list,
+            sub_y_list=[od_y, (-1, 67), (-1, 67)],
             lay_info_list=lay_info_list,
             sub_type=sub_type,
             imp_params=imp_params,
             is_sub_ring=False,
             dnw_mode='',
-
         )
 
         # step 8: return results
