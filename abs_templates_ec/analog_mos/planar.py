@@ -68,6 +68,7 @@ class MOSTechPlanarGeneric(MOSTech):
         MOSTech.__init__(self, config, tech_info, mos_entry_name=mos_entry_name)
 
     def get_mos_yloc_info(self, lch_unit, w, **kwargs):
+        # type: (int, float, Any) -> Dict[str, Any]
         """Computes Y coordinates of various layers in the transistor row.
 
         The returned dictionary should have the following entries:
@@ -94,7 +95,6 @@ class MOSTechPlanarGeneric(MOSTech):
             Y coordinate interval where horizontal drain/source wire can
             contact to drain/source.
         """
-        # type: (int, float, Any) -> Dict[str, Any]
         # get transistor constants
         mos_constants = self.get_mos_tech_constants(lch_unit)
         od_spy = mos_constants['od_spy']
@@ -763,6 +763,7 @@ class MOSTechPlanarGeneric(MOSTech):
         thres_layers_info_struct = mos_constants['thres_layers']
         sd_pitch = mos_constants['sd_pitch']
         po_od_exty = mos_constants['po_od_exty']
+        po_spy = mos_constants['po_spy']
 
         yt = w * mos_pitch
         yc = yt // 2
@@ -777,6 +778,10 @@ class MOSTechPlanarGeneric(MOSTech):
         top_imp = 'nch' if top_row_type == 'nch' or top_row_type == 'ptap' else 'pch'
 
         po_y_list = self._get_dummy_po_y_list(lch_unit, bot_ext_info, top_ext_info, yt)
+        if po_y_list:
+            # TODO: hack
+            # maximize PO dummy to satisfy poly density
+            po_y_list = [(po_spy // 2, yt - po_spy // 2)]
 
         lay_info_list = []
         if not po_y_list:
@@ -790,9 +795,15 @@ class MOSTechPlanarGeneric(MOSTech):
             # get PO Y coordinates
             num_dod = len(po_y_list)
             od_y_list = []
+            od_dum_max_h = mos_constants.get('od_dum_max_h', None)
             for po_yb, po_yt in po_y_list:
                 od_yb = po_yb + po_od_exty
                 od_yt = po_yt - po_od_exty
+                if od_dum_max_h:
+                    if od_yt - od_yb > od_dum_max_h:
+                        od_yc = (od_yb + od_yt) // 2
+                        od_yb = od_yc - od_dum_max_h // 2
+                        od_yt = od_yb + od_dum_max_h
                 od_y_list.append((od_yb, od_yt))
 
             # compute implant split Y coordinates
@@ -1357,7 +1368,8 @@ class MOSTechPlanarGeneric(MOSTech):
             sub_y_list=sub_y_list,
         )
 
-    def draw_od(self, template, od_name, od_box, nx=1, ny=1, spx=0, spy=0, **kwargs):
+    @classmethod
+    def draw_od(cls, template, od_name, od_box, nx=1, ny=1, spx=0, spy=0, **kwargs):
         template.add_rect(od_name, od_box, nx=nx, ny=ny, spx=spx, spy=spy, unit_mode=True)
 
     def draw_mos(self, template, layout_info):
@@ -1935,7 +1947,6 @@ class MOSTechPlanarGeneric(MOSTech):
             if box.is_physical():
                 template.add_rect(imp_lay, box)
 
-
     def _draw_g_vias(self,
                      template,
                      layout_info,
@@ -2217,7 +2228,7 @@ class MOSTechPlanarGeneric(MOSTech):
         yt_min = min(mbot_yt - via_benc_le, mtop_yt - via_tenc_le)
         via_yc = (yb_max + yt_min) // 2
         area_h = yt_min - yb_max
-        #Number of vias calculated using heigth of the via
+        # Number of vias calculated using heigth of the via
         num_via = (area_h + via_sp) // (via_h + via_sp)
         if num_via < 0:
             import pdb
@@ -2227,8 +2238,8 @@ class MOSTechPlanarGeneric(MOSTech):
             via_sp = arr_sp
             num_via = (area_h + via_sp) // (via_h + via_sp)
 
-        #Array height calculated using heigth of the via
-        via_harr = num_via * (via_h + via_sp) - via_sp #This is the minimum area enclosures should be added
+        # Array height calculated using heigth of the via
+        via_harr = num_via * (via_h + via_sp) - via_sp  # This is the minimum area enclosures should be added
         via_yb = via_yc - via_harr // 2
         via_yt = via_yb + via_harr
 
