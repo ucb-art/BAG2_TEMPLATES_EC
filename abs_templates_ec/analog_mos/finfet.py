@@ -1368,10 +1368,11 @@ class MOSTechFinfetBase(MOSTech, metaclass=abc.ABCMeta):
             mtype = self.get_implant_type(lch_unit, mtype, is_planar_sub=is_planar_sub, is_sub_ring=is_sub_ring,
                                           prev_mtype=prev_mtype)
             imp_layers_info = imp_layers_info_struct[mtype]
-            thres_layers_info = thres_layers_info_struct[mtype][thres]
-            for cur_yb, cur_yt, lay_info in [(imp_yb, imp_yt, imp_layers_info),
-                                             (thres_yb, thres_yt, thres_layers_info)]:
-
+            lay_list = [(imp_yb, imp_yt, imp_layers_info)]
+            if thres:
+                thres_layers_info = thres_layers_info_struct[mtype][thres]
+                lay_list.append((thres_yb, thres_yt, thres_layers_info))
+            for cur_yb, cur_yt, lay_info in lay_list:
                 for lay_name in lay_info:
                     lay_info_list.append((lay_name, 0, cur_yb, cur_yt))
             if mtype == 'ntap_ext':
@@ -1733,9 +1734,11 @@ class MOSTechFinfetBase(MOSTech, metaclass=abc.ABCMeta):
                 implant_type = self.get_implant_type(lch_unit, sub_type, is_planar_sub=is_planar_sub,
                                                      is_sub_ring=is_sub_ring)
                 imp_layers_info = imp_layers_info_struct[implant_type]
-                thres_layers_info = thres_layers_info_struct[implant_type][thres]
-                for cur_yb, cur_yt, lay_info in [(imp_yb, imp_yt, imp_layers_info),
-                                                 (thres_yb, thres_yt, thres_layers_info)]:
+                lay_list = [(imp_yb, imp_yt, imp_layers_info)]
+                if thres:
+                    thres_layers_info = thres_layers_info_struct[implant_type][thres]
+                    lay_list.append((thres_yb, thres_yt, thres_layers_info))
+                for cur_yb, cur_yt, lay_info in lay_list:
                     if cur_yt > cur_yb:
                         for lay_name in lay_info:
                             if lay_name in imp_edge_dx:
@@ -1883,9 +1886,11 @@ class MOSTechFinfetBase(MOSTech, metaclass=abc.ABCMeta):
                 implant_type = self.get_implant_type(lch_unit, sub_type, is_planar_sub=is_planar_sub,
                                                      is_sub_ring=is_sub_ring)
                 imp_layers_info = imp_layers_info_struct[implant_type]
-                thres_layers_info = thres_layers_info_struct[implant_type][thres]
-                for cur_yb, cur_yt, lay_info in [(imp_yb, imp_yt, imp_layers_info),
-                                                 (thres_yb, thres_yt, thres_layers_info)]:
+                lay_list = [(imp_yb, imp_yt, imp_layers_info)]
+                if thres:
+                    thres_layers_info = thres_layers_info_struct[implant_type][thres]
+                    lay_list.append((thres_yb, thres_yt, thres_layers_info))
+                for cur_yb, cur_yt, lay_info in lay_list:
                     for lay_name in lay_info:
                         new_lay_list.append((lay_name, 0, cur_yb, cur_yt))
             # add DNW layers

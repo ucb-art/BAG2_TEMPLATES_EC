@@ -613,7 +613,10 @@ class MOSTech(object, metaclass=abc.ABCMeta):
             a list of implant/well/threshold layer names.
         """
         imp_layers_info = self.mos_config['imp_layers'][mos_type]
-        thres_layers_info = self.mos_config['thres_layers'][mos_type][threshold]
+        if threshold:
+            thres_layers_info = self.mos_config['thres_layers'][mos_type][threshold]
+        else:
+            thres_layers_info = {}
 
         return list(chain(imp_layers_info.keys(), thres_layers_info.keys()))
 
