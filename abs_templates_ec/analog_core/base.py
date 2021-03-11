@@ -2136,8 +2136,10 @@ class AnalogBase(TemplateBase, metaclass=abc.ABCMeta):
                     top_tr_idx = min(ngintv[0], next_tr_intv['g'][0],
                                      next_tr_intv['ds2'][0], next_tr_intv['ds'][0]) - 1
             else:
+                # This selects the top substrate row.
                 top_tr_idx = self._tr_intvs[sub_row_idx]['ds'][1] - 1
-            if sub_row_idx - 1 >= 0:
+
+            if sub_row_idx - 1 >= 0 :
                 prev_tr_intv = self._tr_intvs[sub_row_idx - 1]
                 pgintv = prev_tr_intv['g2']
                 if pgintv is None:
@@ -2146,7 +2148,13 @@ class AnalogBase(TemplateBase, metaclass=abc.ABCMeta):
                     bot_tr_idx = max(prev_tr_intv['ds'][1], prev_tr_intv['ds2'][1],
                                      prev_tr_intv['g'][1], pgintv[1])
             else:
+                # This selects the bottom substrate row.
                 bot_tr_idx = self._tr_intvs[sub_row_idx]['ds'][0]
+           
+            if sub_row_idx == 0 or sub_row_idx == num_rows-1:
+                top_tr_idx = self._tr_intvs[sub_row_idx]['ds'][1] - 1
+                bot_tr_idx = self._tr_intvs[sub_row_idx]['ds'][0]
+
             round_up = (subinst.orientation == 'MX')
             if sup_width is None:
                 ntr = int(top_tr_idx - bot_tr_idx + 1)
@@ -2155,6 +2163,8 @@ class AnalogBase(TemplateBase, metaclass=abc.ABCMeta):
                 sub_w = sup_width
             if mid_tidx is None:
                 mid_tidx = self.grid.get_middle_track(bot_tr_idx, top_tr_idx, round_up=round_up)
+             
+
             track_id = TrackID(hm_layer, mid_tidx, width=sub_w)
 
             # get all wires to connect to supply.
